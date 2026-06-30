@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import z from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { authClient } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth/auth-client";
 import { toast } from "sonner";
 import {
   Form,
