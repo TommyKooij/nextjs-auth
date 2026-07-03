@@ -4,8 +4,34 @@ import { db } from "@/app/index"; // your drizzle instance
 import { nextCookies } from "better-auth/next-js";
 import { sendPasswordResetEmail } from "../emails/password-email-reset";
 import { sendEmailVerificationEmail } from "../emails/email-verification";
+import { createAuthMiddleware } from "better-auth/api";
+import { sendWelcomeEmail } from "../emails/welcome-email";
+import { sendDeleteAccountVerificationEmail } from "../emails/delete-account-verification";
 
 export const auth = betterAuth({
+  user: {
+    changeEmail: {
+      enabled: true,
+      sendChangeEmailVerification: async ({ user, url, newEmail }) => {
+        await sendEmailVerificationEmail({
+          user: { ...user, email: newEmail },
+          url,
+        });
+      },
+    },
+    deleteUser: {
+      enabled: true,
+      sendDeleteAccountVerification: async ({ user, url }) => {
+        await sendDeleteAccountVerificationEmail({ user, url });
+      },
+    },
+    additionalFields: {
+      favoriteNumber: {
+        type: "number",
+        required: true,
+      },
+    },
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: true,
@@ -39,4 +65,18 @@ export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg", // or "mysql", "sqlite"
   }),
+  hooks: {
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path.startsWith("/sign-up")) {
+        const user = ctx.context.newSession?.user ?? {
+          name: ctx.body.name,
+          email: ctx.body.email,
+        };
+
+        if (user != null) {
+          await sendWelcomeEmail(user);
+        }
+      }
+    }),
+  },
 });
